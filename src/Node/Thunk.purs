@@ -12,7 +12,7 @@ foreign import resolve
   :: forall a. a -> Thunk a
 
 foreign import reject
-  "function resolve(err) { return function(cb) { cb(err); } }"
+  "function reject(err) { return function(cb) { cb(err); } }"
   :: forall a. Error -> Thunk Unit
 
 foreign import runThunk
@@ -49,22 +49,45 @@ foreign import fmap
   :: forall a b. (a -> b) -> Thunk a -> Thunk b
 
 foreign import app
-  "function app(f) {\
-  \  return function(a) {\
-  \    return function(cb) {\
-  \      f(function(err, f) {\
-  \        if (err) return cb(err);\
-  \        a(function(err, a) {\
-  \          if (err) return cb(err);\
-  \          try {\
-  \            cb(null, f(a));\
-  \          } catch(err) {\
-  \            cb(err);\
-  \          }\
-  \        });\
-  \      });\
-  \    };\
-  \  };\
+  "function app(f) {                           \
+  \  return function(a) {                      \
+  \    return function(cb) {                   \
+  \      var latch = 2;                        \
+  \      var fVal, aVal;                       \
+  \                                            \
+  \      f(function(err, f) {                  \
+  \        if (err && latch !== 0) {           \
+  \          latch = 0;                        \
+  \          return cb(err);                   \
+  \        }                                   \
+  \        latch = latch - 1;                  \
+  \        fVal = f;                           \
+  \        if (latch === 0) {                  \
+  \          try {                             \
+  \            cb(null, fVal(aVal));           \
+  \          } catch(err) {                    \
+  \            cb(err);                        \
+  \          }                                 \
+  \        }                                   \
+  \      });                                   \
+  \                                            \
+  \      a(function(err, a) {                  \
+  \        if (err && latch !== 0) {           \
+  \          latch = 0;                        \
+  \          return cb(err);                   \
+  \        }                                   \
+  \        latch = latch - 1;                  \
+  \        aVal = a;                           \
+  \        if (latch === 0) {                  \
+  \          try {                             \
+  \            cb(null, fVal(aVal));           \
+  \          } catch(err) {                    \
+  \            cb(err);                        \
+  \          }                                 \
+  \        }                                   \
+  \      });                                   \
+  \    };                                      \
+  \  };                                        \
   \}"
   :: forall a b. Thunk (a -> b) -> Thunk a -> Thunk b
 
@@ -113,7 +136,7 @@ instance thunkApplication :: Applicative Thunk where
   pure = resolve
 
 instance thunkBind :: Bind Thunk where
-  (>>=) = bind
+  (>>=) = bind 
 
 instance thunkMonad :: Monad Thunk
 
@@ -183,6 +206,12 @@ foreign import runThunkFn5
   \}"
   :: forall a b c d e r. ThunkFn5 a b c d e -> (a -> b -> c -> d -> e -> Thunk r)
 
+par :: forall a b. Thunk a -> Thunk b -> Thunk {a :: a, b :: b}
+par a b =
+  pure collect <*> a <*> b
+    where
+  collect a b = {a: a, b: b}
+
 foreign import fs "var fs = require('fs');" :: {
   readFile :: ThunkFn2 String String,
   writeFile :: ThunkFn3 String String String
@@ -191,6 +220,24 @@ foreign import fs "var fs = require('fs');" :: {
 readFile = runThunkFn2 fs.readFile
 writeFile = runThunkFn3 fs.writeFile
 
+printA = do
+  liftEff $ print ".a"
+  delay 1000
+  readFile "./src/Node/Thunk.purs" "utf8"
+  liftEff $ print "a"
+
+printB = do
+  liftEff $ print ".b"
+  readFile "./src/Node/Thunk.purs" "utf8"
+  delay 1000
+  liftEff $ print "b"
+
+printC = do
+  liftEff $ print ".c"
+  readFile "./src/Node/Thunk.purs" "utf8"
+  delay 1000
+  liftEff $ print "c"
+
 computation = do
   liftEff $ print "wait..."
   delay 1000
@@ -198,6 +245,7 @@ computation = do
   contents <- readFile "./src/Node/Thunk.purs" "utf8"
   liftEff $ trace contents
   x <- resolve(1)
+  par printA (par printB printC)
   return (x + 1)
 
 main = runThunk computation handle
