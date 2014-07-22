@@ -3,61 +3,55 @@
 `Node.Thunk` is a library for [PureScript][purescript] which helps to interface
 with asynchronous Node.js code:
 
+## Wrapping Node.js aync code with FFI and thunks
+
+This simple example shows how to use `Node.Thunk` to wrap a part of Node.js's
+`fs` module:
+
     import Node.Thunk
 
-    --
-    -- Define incomplete interface to Node.js's fs module
-    --
     foreign import fs "var fs = require('fs');" :: {
-      readFile :: ThunkFn2 String String,
-      writeFile :: ThunkFn3 String String String
+      readFile :: ThunkFn1 String String
       }
 
-    readFile = runThunkFn2 fs.readFile
-    writeFile = runThunkFn3 fs.writeFile
+    readFile = runThunkFn1 fs.readFile
 
-    --
-    -- Some computation with thunks, delay is just a setTimeout
-    --
-    printA = do
-      liftEff $ print "start a"
+The type `ThunkFn1 a b` means that a function takes a single argument of type
+`a` and produces a result of type `b`. To convert `ThunkFn1 a b` into a
+PureScript function `a -> Thunk b` we need to apply `runThunkFn1` function.
+
+Similarly to `ThunkFn1` there exists `ThunkFn2`, `ThunkFn3` for each arity up to
+5.
+
+## Computation with thunks
+
+This simple examples shows how to combine computations with thunks:
+
+    readFileAndWait = do
+      contents <- readFile "./README.md"
       delay 1000
-      liftEff $ print "a"
+      return contents
 
-    printB = do
-      liftEff $ print "start b"
-      delay 1000
-      liftEff $ print "b"
+`delay` is a computation which results into `Unit` value (nothing) after some
+milliseconds elapsed.
 
-    printC = do
-      liftEff $ print "start c"
-      delay 1000
-      liftEff $ print "c"
+To execute computation you should use `runThunk` function:
 
-    ---
-    --- A main computation
-    ---
-    computation = do
-
-      -- note we use liftEff to execute Eff actions inside Thunk computation
-      liftEff $ print "wait..."
-      delay 1000
-      liftEff $ print "go!"
-
-      -- read a file and print it on console
-      contents <- readFile "./src/Node/Thunk.purs" "utf8"
-      liftEff $ trace contents
-
-      -- now we start executing printA, printB and printC in parallel
-      par printA (par printB printC)
-
-    --
-    -- We use runThunk to start executing Thunk computations inside Eff
-    -- computation.
-    --
-    main = runThunk computation handle
+    main = runThunk readFileAndWait handle
         where
-      handle (Left err) = print ("Error: " ++ (show err))
-      handle (Right result) = print ("Result: " ++ (show result))
+      handle (Left err) = -- handle error
+      handle (Right result) = -- handle result
+
+`runThunk` function thunk as first argument and handler as second argument.
+Handler is supplied with either an error or a result.
+
+## Executing `Eff` actions inside thunk computations
+
+There's a function `liftEff` which can lift `Eff` action into `Thunk`:
+
+    readFileAndPrintContents = do
+      contents <- readFile "./README.md"
+      liftEff (print contents)
+
 
 [purescript]: http://purescript.org
