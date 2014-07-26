@@ -235,3 +235,12 @@ pair a b =
   pure collect <*> a <*> b
     where
   collect first second = {first: first, second: second}
+
+foreign import raise
+  "function raise(err) { return function() { throw err; } }"
+  :: forall eff. Error -> Eff (eff) Unit
+
+unsafeRunThunk thunk = runThunk thunk handle
+    where
+  handle (Left err) = raise err
+  handle (Right result) = return unit
