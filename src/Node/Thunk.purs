@@ -2,6 +2,7 @@ module Node.Thunk where
 
 import Control.Monad.Eff
 import Data.Either
+import Data.Function
 import Global
 
 --
@@ -25,21 +26,26 @@ foreign import reject
   \}"
   :: forall a. Error -> Thunk a
 
-foreign import runThunk
-  "function runThunk(a) {                              \
-  \  return function(handler) {                        \
-  \    return function() {                             \
-  \      return a(function(err, result) {              \
-  \        if (err) {                                  \
-  \          handler(PS.Data_Either.Left(err))();      \
-  \        } else {                                    \
-  \          handler(PS.Data_Either.Right(result))();  \
-  \        }                                           \
-  \      });                                           \
-  \    };                                              \
+foreign import _runThunk
+  "function _runThunk(left, right, thunk, handler) {   \
+  \  return function() {                               \
+  \    return thunk(function(err, result) {            \
+  \      if (err) {                                    \
+  \        handler(left(err))();                       \
+  \      } else {                                      \
+  \        handler(right(result))();                   \
+  \      }                                             \
+  \    });                                             \
   \  };                                                \
   \}"
-  :: forall a b eff eff2.  Thunk a -> (Either Error a -> Eff (eff) b) -> Eff (eff2) Unit
+  :: forall a b eff eff2.  Fn4
+    (Error -> Either Error a)
+    (a -> Either Error a)
+    (Thunk a)
+    (Either Error a -> Eff (eff) b)
+    (Eff (eff2) Unit)
+
+runThunk = runFn4 _runThunk Left Right
 
 foreign import fmap
   "function fmap(f) {                                  \
