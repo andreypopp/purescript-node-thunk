@@ -23,7 +23,7 @@ foreign import reject
   "function reject(err) {                              \
   \   return function(cb) { cb(err); };                \
   \}"
-  :: forall a. Error -> Thunk Unit
+  :: forall a. Error -> Thunk a
 
 foreign import runThunk
   "function runThunk(a) {                              \
@@ -39,7 +39,7 @@ foreign import runThunk
   \    };                                              \
   \  };                                                \
   \}"
-  :: forall a b eff eff2. Thunk a -> (Either Error a -> Eff (eff) b) -> Eff (eff2) Unit
+  :: forall a b eff eff2.  Thunk a -> (Either Error a -> Eff (eff) b) -> Eff (eff2) Unit
 
 foreign import fmap
   "function fmap(f) {                                  \
@@ -143,6 +143,10 @@ foreign import liftEff
   \  }                                                 \
   \}"
   :: forall a eff. Eff (eff) a -> Thunk a
+
+liftEither :: forall a. Either Error a -> Thunk a
+liftEither (Left err) = reject err
+liftEither (Right result) = resolve result
 
 instance thunkFunctor :: Functor Thunk where
   (<$>) = fmap
