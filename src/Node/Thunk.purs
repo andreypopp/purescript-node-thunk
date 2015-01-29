@@ -3,7 +3,6 @@ module Node.Thunk where
 import Control.Monad.Eff
 import Data.Either
 import Data.Function
-import Global
 
 --
 -- Thunk is represented as
