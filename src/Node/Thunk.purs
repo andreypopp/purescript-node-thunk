@@ -14,6 +14,8 @@ import Global
 --
 foreign import data Thunk :: * -> *
 
+foreign import data Error :: *
+
 foreign import resolve
   "function resolve(a) {                               \
   \  return function(cb) { cb(null, a); };             \
