@@ -3,7 +3,6 @@ module Node.Thunk where
 import Control.Monad.Eff
 import Data.Either
 import Data.Function
-import Global
 
 --
 -- Thunk is represented as
@@ -13,6 +12,8 @@ import Global
 -- where cb is expected to be function(err, result) { ... }
 --
 foreign import data Thunk :: * -> *
+
+foreign import data Error :: *
 
 foreign import resolve
   "function resolve(a) {                               \
