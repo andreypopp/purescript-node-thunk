@@ -3,7 +3,7 @@
 `Node.Thunk` is a library for [PureScript][purescript] which helps to interface
 with asynchronous Node.js code:
 
-## Wrapping Node.js aync code with FFI and thunks
+## Wrapping Node.js async code with FFI and thunks
 
 This simple example shows how to use `Node.Thunk` to wrap a part of Node.js's
 `fs` module:
@@ -12,7 +12,7 @@ This simple example shows how to use `Node.Thunk` to wrap a part of Node.js's
 
     foreign import fs "var fs = require('fs');" :: {
       readFile :: ThunkFn1 String String
-      }
+    }
 
     readFile = runThunkFn1 fs.readFile
 
