@@ -1,6 +1,7 @@
 module Node.Thunk where
 
 import Control.Monad.Eff
+import Control.Monad.Eff.Exception
 import Data.Either
 import Data.Function
 
@@ -12,8 +13,6 @@ import Data.Function
 -- where cb is expected to be function(err, result) { ... }
 --
 foreign import data Thunk :: * -> *
-
-foreign import data Error :: *
 
 foreign import resolve
   """

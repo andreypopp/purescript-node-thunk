@@ -20,6 +20,7 @@
     "tests"
   ],
   "dependencies": {
+    "purescript-exceptions": "~0.2.2",
     "purescript-either": "~0.1.2"
   },
   "homepage": "https://github.com/andreypopp/purescript-node-thunk"
